@@ -1,0 +1,22 @@
+[package]
+name = "salvo_api"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.94"
+argon2 = { version = "0.5.3", features = [] }
+clia-tracing-config = "0.2.7"
+jsonwebtoken = "9.3.0"
+rand = { version = "0.8.5", features = [] }
+rust-embed = "8.5.0"
+salvo = { version = "0.74.2", features = ["anyhow", "logging", "cors", "oapi", "jwt-auth", "rustls", "catch-panic", "cookie", "serve-static", "test"] }
+serde = "1.0.215"
+serde_yml = "0.0.12"
+sqlx = { version = "0.8.2", features = ["runtime-tokio", "macros", "sqlite"] }
+thiserror = "2.0.4"
+jiff = "0.1.15"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+uuid = { version = "1.11.0", features = ["v4", "fast-rng", "macro-diagnostics"] }
+validator = { version = "0.19", features = ["derive"] }
