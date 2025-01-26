@@ -1,4 +1,3 @@
-use anyhow::Result;
 use jiff::{Timestamp, ToSpan};
 use jsonwebtoken::{decode, Algorithm, DecodingKey, EncodingKey, Validation};
 use salvo::jwt_auth::{ConstDecoder, CookieFinder, HeaderFinder, QueryFinder};
@@ -31,7 +30,10 @@ pub fn jwt_middleware() -> JwtAuth<JwtClaims, ConstDecoder> {
 }
 
 #[allow(dead_code)]
-pub fn get_token(username: String, user_id: String) -> Result<(String, i64)> {
+pub fn get_token(
+    username: String,
+    user_id: String,
+) -> Result<(String, i64), Box<dyn std::error::Error>> {
     let exp = jiff::Timestamp::now()
         .checked_add(CFG.jwt.jwt_exp.second())
         .expect("Could not get jiff timestamp");

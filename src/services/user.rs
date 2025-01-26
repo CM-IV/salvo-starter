@@ -1,6 +1,7 @@
 use crate::{
+    app_error::AppError,
     app_writer::AppResult,
-    db::DB,
+    config::DB,
     dtos::user::{
         UserAddRequest, UserLoginRequest, UserLoginResponse, UserResponse, UserUpdateRequest,
     },
@@ -9,12 +10,13 @@ use crate::{
     utils::rand_utils,
 };
 use uuid::Uuid;
+
 pub async fn add_user(req: UserAddRequest) -> AppResult<UserResponse> {
-    let db = DB
-        .get()
-        .ok_or(anyhow::anyhow!("Database connection failed."))?;
+    let db = DB.get().ok_or(AppError::DatabaseConnectionFailed)?;
     let id = Uuid::new_v4().to_string();
-    let hash_password = rand_utils::hash_password(req.password).await?;
+    let hash_password = rand_utils::hash_password(req.password)
+        .await
+        .map_err(|e| AppError::PasswordHashError(e.to_string()))?;
     let _ = sqlx::query!(
         r#"
             INSERT INTO users (id, username, password)
@@ -34,9 +36,7 @@ pub async fn add_user(req: UserAddRequest) -> AppResult<UserResponse> {
 }
 
 pub async fn login(req: UserLoginRequest) -> AppResult<UserLoginResponse> {
-    let db = DB
-        .get()
-        .ok_or(anyhow::anyhow!("Database connection failed."))?;
+    let db = DB.get().ok_or(AppError::DatabaseConnectionFailed)?;
     let user = sqlx::query_as!(
         User,
         r#"
@@ -48,19 +48,17 @@ pub async fn login(req: UserLoginRequest) -> AppResult<UserLoginResponse> {
     .fetch_optional(db)
     .await?;
     if user.is_none() {
-        return Err(anyhow::anyhow!("User does not exist.").into());
+        return Err(AppError::UserNotFound.into());
     }
     let user = user.unwrap();
     if rand_utils::verify_password(req.password, user.password)
         .await
         .is_err()
     {
-        return Err(anyhow::anyhow!("Incorrect password.").into());
+        return Err(AppError::InvalidPassword.into());
     }
-    let (token, exp) = get_token(user.username.clone(), user.id.clone())?;
-
-    println!("{}", token);
-    println!("{}", exp);
+    let (token, exp) = get_token(user.username.clone(), user.id.clone())
+        .map_err(|_| AppError::TokenGenerationFailed)?;
 
     let res = UserLoginResponse {
         id: user.id,
@@ -72,10 +70,10 @@ pub async fn login(req: UserLoginRequest) -> AppResult<UserLoginResponse> {
 }
 
 pub async fn update_user(req: UserUpdateRequest) -> AppResult<UserResponse> {
-    let db = DB
-        .get()
-        .ok_or(anyhow::anyhow!("Database connection failed."))?;
-    let hash_password = rand_utils::hash_password(req.password).await?;
+    let db = DB.get().ok_or(AppError::DatabaseConnectionFailed)?;
+    let hash_password = rand_utils::hash_password(req.password)
+        .await
+        .map_err(|e| AppError::PasswordHashError(e.to_string()))?;
     let _ = sqlx::query!(
         r#"
             UPDATE users
@@ -96,9 +94,7 @@ pub async fn update_user(req: UserUpdateRequest) -> AppResult<UserResponse> {
 }
 
 pub async fn delete_user(id: String) -> AppResult<()> {
-    let db = DB
-        .get()
-        .ok_or(anyhow::anyhow!("Database connection failed."))?;
+    let db = DB.get().ok_or(AppError::DatabaseConnectionFailed)?;
     sqlx::query!(
         r#"
             DELETE FROM users
@@ -113,9 +109,7 @@ pub async fn delete_user(id: String) -> AppResult<()> {
 }
 
 pub async fn users() -> AppResult<Vec<UserResponse>> {
-    let db = DB
-        .get()
-        .ok_or(anyhow::anyhow!("Database connection failed."))?;
+    let db = DB.get().ok_or(AppError::DatabaseConnectionFailed)?;
     let users = sqlx::query_as!(
         User,
         r#"

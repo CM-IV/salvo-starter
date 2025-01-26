@@ -76,12 +76,17 @@ impl<T: Serialize + Send + Default> ResponseBuilder<T> {
 
 impl ErrorResponseBuilder {
     pub fn with_err(err: AppError) -> Self {
-    let (code, msg) = match &err {
-    AppError::AnyHow(e) => (500, e.to_string()),
-    AppError::ParseError(e) => (400, e.to_string()),
-    AppError::SqlxError(e) => (500, e.to_string()),
-    AppError::ValidationError(e) => (400, e.to_string()),
-    };
+        let (code, msg) = match &err {
+            AppError::ParseError(e) => (400, e.to_string()),
+            AppError::SqlxError(e) => (500, e.to_string()),
+            AppError::DatabaseConnectionFailed => (500, "Database connection failed".to_string()),
+            AppError::ValidationError(e) => (400, e.to_string()),
+            AppError::PasswordHashError(e) => (500, e.to_string()),
+            AppError::InvalidPassword => (401, "Invalid password".to_string()),
+            AppError::TaskPanicked => (500, "Task panicked".to_string()),
+            AppError::UserNotFound => (404, "User does not exist".to_string()),
+            AppError::TokenGenerationFailed => (500, "Failed to generate token".to_string()),
+        };
         Self {
             code,
             msg,
@@ -89,6 +94,7 @@ impl ErrorResponseBuilder {
         }
     }
 }
+
 impl<T: Serialize + Send + Default> ResponseBuilder<T> {
     pub fn into_response(self, res: &mut Response) {
         res.render(Json(self));
@@ -97,13 +103,18 @@ impl<T: Serialize + Send + Default> ResponseBuilder<T> {
 
 impl ErrorResponseBuilder {
     pub fn into_response(self, res: &mut Response) {
-    let status_code = match self.source_error {
-        AppError::AnyHow(_) => StatusCode::INTERNAL_SERVER_ERROR,
-        AppError::ParseError(_) => StatusCode::BAD_REQUEST,
-        AppError::SqlxError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-        AppError::ValidationError(_) => StatusCode::BAD_REQUEST,
-    };        
-    res.stuff(status_code, Json(self));
+        let status_code = match self.source_error {
+            AppError::ParseError(_) => StatusCode::BAD_REQUEST,
+            AppError::SqlxError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            AppError::DatabaseConnectionFailed => StatusCode::INTERNAL_SERVER_ERROR,
+            AppError::ValidationError(_) => StatusCode::BAD_REQUEST,
+            AppError::PasswordHashError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            AppError::InvalidPassword => StatusCode::UNAUTHORIZED,
+            AppError::TaskPanicked => StatusCode::INTERNAL_SERVER_ERROR,
+            AppError::UserNotFound => StatusCode::NOT_FOUND,
+            AppError::TokenGenerationFailed => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+        res.stuff(status_code, Json(self));
     }
 }
 

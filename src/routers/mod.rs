@@ -4,12 +4,7 @@ use salvo::{
     Router,
 };
 
-use self::{
-    demo::hello,
-    user::{delete_user, get_users, post_add_user, post_login, put_update_user},
-};
-pub mod demo;
-mod static_routers;
+use self::user::{delete_user, get_users, post_add_user, post_login, put_update_user};
 pub mod user;
 
 pub fn router() -> Router {
@@ -21,7 +16,7 @@ pub fn router() -> Router {
     let _cors_handler = cors_middleware();
 
     let mut need_auth_routers = vec![Router::with_path("/api/users").get(get_users).push(
-        Router::with_path("<id>")
+        Router::with_path("{id}")
             .put(put_update_user)
             .delete(delete_user),
     )];
@@ -30,7 +25,6 @@ pub fn router() -> Router {
         //.hoop(_cors_handler)
         .hoop(Logger::new())
         .hoop(CatchPanic::new())
-        .get(hello)
         .append(&mut no_auth_routers)
         .push(
             Router::new()

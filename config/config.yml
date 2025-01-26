@@ -1,20 +1,11 @@
 server:
-  name: "salvo_api"
-  address: "0.0.0.0:5800"
-  ssl: false
   cors_allow_origin:
     - "https://salvo.rs"
 
-database:
-  database_url: "sqlite:data/demo.db"
+database: {}
 
 jwt:
-  jwt_secret: "secret"
   jwt_exp: 6000
-
-cert:
-  cert: "config/certs/cert.pem"
-  key: "config/certs/key.pem"
 
 log:
   filter_level: "info"        # Available options: "debug", "info", "warn", "error"
